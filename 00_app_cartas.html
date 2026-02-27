@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lotería Interactiva</title>
+<style>
+  body { font-family: Arial, sans-serif; text-align: center; background: #f0f8ff; padding: 20px;}
+  #carta-container {
+    margin: 20px auto;
+    width: 300px;
+    height: 420px;
+    border: 3px solid #333;
+    border-radius: 10px;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 3px 3px 10px rgba(0,0,0,0.2);
+  }
+  #carta-img {
+    max-width: 100%;
+    max-height: 100%;
+    margin-bottom: 0;
+    object-fit: contain;
+  }
+  #controles {
+    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    align-items: center;
+  }
+  button {
+    font-size: 1em;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: none;
+    background-color: #007acc;
+    color: white;
+    cursor: pointer;
+  }
+  button:disabled {
+    background-color: grey;
+    cursor: not-allowed;
+  }
+  label {
+    font-weight: bold;
+    margin-left: 5px;
+  }
+  select {
+    font-size: 1em;
+    padding: 4px 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  #historial {
+    margin-top: 20px;
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background: #fafafa;
+    font-size: 0.9em;
+    text-align: left;
+    width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #info {
+    margin-top: 10px;
+    color: #555;
+    font-size: 0.9em;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+</style>
+</head>
+<body>
+
+<h1>Lotería Interactiva</h1>
+
+<div id="carta-container">
+  <img id="carta-img" src="" alt="Carta" />
+</div>
+
+<div id="controles">
+  <button id="btn-iniciar">Iniciar</button>
+  <button id="btn-pausar" disabled>Pausar</button>
+  <button id="btn-reiniciar" disabled>Reiniciar</button>
+
+  <label for="timer-select">Tiempo entre cartas (s):</label>
+  <select id="timer-select" aria-label="Tiempo entre cartas">
+    <option value="3000">3</option>
+    <option value="4000" selected>4</option>
+    <option value="5000">5</option>
+    <option value="6000">6</option>
+  </select>
+
+  <label for="voice-select">Voz:</label>
+  <select id="voice-select" aria-label="Seleccionar voz"></select>
+</div>
+
+<div id="historial">
+  <strong>Cartas mostradas:</strong>
+  <ul id="lista-historial"></ul>
+</div>
+
+<div id="info">Puedes pausar en cualquier momento, y consultar las cartas ya salidas.</div>
+
+<script>
+// Lista de cartas (ajusta con tus imágenes y nombres)
+const cartas = [
+  { archivo: "01_justo_sierra.png", nombre: "Instituto Justo Sierra" },
+  { archivo: "02_Moises_VG.png", nombre: "Moisés Vázquez Gudiño" },
+  { archivo: "03_Primera_Convocatoria.png", nombre: "Primera convocatoria" },
+  { archivo: "04_ITNO.png", nombre: "Instituto Tecnológico del Noroeste" },
+  { archivo: "05_Maraton_radio.png", nombre: "Maratón radiofónico" },
+  { archivo: "06_Primera_lic.png", nombre: "Primera licenciatura" },
+  { archivo: "07_Anuies.png", nombre: "Anuies" },
+  { archivo: "08_LO.png", nombre: "Primera ley orgánica" },
+  { archivo: "09_Primera_piedra.png", nombre: "La primera piedra" },
+  { archivo: "10_Edificio_H.png", nombre: "Edificio ache" },
+  { archivo: "11_Campus_centro.png", nombre: "Campus centro" },
+  { archivo: "12_Campus_nainari.png", nombre: "Campus náinari" },
+  { archivo: "13_Unidad_navojoa.png", nombre: "Unidad navojoa" },
+  { archivo: "14_Unidad_guaymas.png", nombre: "Unidad Guaymas" },
+  { archivo: "15_Campus_empalme.png", nombre: "Campus Empalme" },
+  { archivo: "16_Sociedad_alumnos.png", nombre: "Sociedad de alumnos" },
+  { archivo: "17_Primera_maestria.png", nombre: "Primera maestría" },
+  { archivo: "18_rectoria.png", nombre: "La rectoría" },
+  { archivo: "19_leones.png", nombre: "Club de leones" },
+  { archivo: "20_directores.png", nombre: "Los directores" },
+  { archivo: "21_rectores.png", nombre: "Los rectores" },
+  { archivo: "22_centro_calculo.png", nombre: "Centro de cálculo" },
+  { archivo: "23_becas.png", nombre: "Becas ITSON" },
+  { archivo: "24_valores.png", nombre: "Valores ITSON" },
+  { archivo: "25_murales.png", nombre: "Murales ITSON" },
+  { archivo: "26_doctorado.png", nombre: "Primer doctorado" },
+  { archivo: "27_biblioteca.png", nombre: "Biblioteca central" },
+  { archivo: "28_autonomia.png", nombre: "Autonomía universitaria" },
+  { archivo: "29_autonomia_plena.png", nombre: "Autonomia plena" },
+  { archivo: "30_investigacion.png", nombre: "Investigación institucional" },
+  { archivo: "31_Arteche.png", nombre: "Héctor Martínez Arteche" },
+  { archivo: "32_teatro.png", nombre: "El teatro" },
+  { archivo: "33_enfermeria.png", nombre: "Escuela de enfermería" },
+  { archivo: "34_cd.png", nombre: "El consejo directivo" },
+  { archivo: "35_potro.png", nombre: "El potro" },
+  { archivo: "36_cudecc.png", nombre: "Cudec" },
+  { archivo: "37_torneo.png", nombre: "Primer torneo deportivo" },
+  { archivo: "38_campana.png", nombre: "La campana" },
+  { archivo: "39_patronato.png", nombre: "El patronato" },
+  { archivo: "40_artes.png", nombre: "Festival de las artes" },
+  { archivo: "41_casaclub.png", nombre: "Casa club" },
+  { archivo: "42_arena.png", nombre: "La arena" },
+  { archivo: "43_galeria.png", nombre: "Galería de arte" },
+  { archivo: "44_futamericano.png", nombre: "Fútbol americano" },
+  { archivo: "45_escudo.png", nombre: "Escudo ITSON" },
+  { archivo: "46_sindical.png", nombre: "Movimiento sindical" },
+  { archivo: "47_comunitaria.png", nombre: "Vinculación comunitaria" },
+  { archivo: "48_ultgeneracion.png", nombre: "Última generación" },
+  { archivo: "49_sugente.png", nombre: "ITSON y su gente" },
+  { archivo: "50_sorteos.png", nombre: "Sorteos" },
+  { archivo: "51_veterinaria.png", nombre: "Veterinaria" },
+  { archivo: "52_cyt.png", nombre: "Ciencia y tecnología" },
+  { archivo: "53_cultura.png", nombre: "Cultura" },
+  { archivo: "54_deportes.png", nombre: "Deportes" }
+];
+
+let baraja = [];
+let mostrando = false;
+let intervalo = null;
+let tiempoEntreCartas = 4000;
+let historial = [];
+
+const imgCarta = document.getElementById("carta-img");
+const btnIniciar = document.getElementById("btn-iniciar");
+const btnPausar = document.getElementById("btn-pausar");
+const btnReiniciar = document.getElementById("btn-reiniciar");
+const timerSelect = document.getElementById("timer-select");
+const voiceSelect = document.getElementById("voice-select");
+const listaHistorial = document.getElementById("lista-historial");
+
+let voces = [];
+let vozSeleccionada = null;
+
+// Cargar voces, pero solo Sabina y Raúl si están disponibles.
+function cargarVoces() {
+  voces = speechSynthesis.getVoices();
+  voiceSelect.innerHTML = "";
+
+  // Filtramos las dos voces que queremos
+  const vocesDeseadas = voces.filter(v =>
+    v.lang === "es-MX" && (v.name.includes("Sabina") || v.name.includes("Raul") || v.name.includes("Raúl"))
+  );
+
+  // Si no se encuentran, listamos cualquier voz en español (máximo dos)
+  if (vocesDeseadas.length === 0) {
+    const vocesEs = voces.filter(v => v.lang.startsWith("es")).slice(0, 2);
+    vocesDeseadas.push(...vocesEs);
+  }
+
+  vocesDeseadas.forEach((voz, i) => {
+    const option = document.createElement("option");
+    option.value = voces.indexOf(voz);
+    option.textContent = `${voz.name} (${voz.lang})${voz.default ? " — Predeterminada" : ""}`;
+    voiceSelect.appendChild(option);
+  });
+
+  if (vocesDeseadas.length > 0) {
+    vozSeleccionada = voces[voces.indexOf(vocesDeseadas[0])];
+    voiceSelect.selectedIndex = 0;
+  }
+}
+
+speechSynthesis.onvoiceschanged = cargarVoces;
+cargarVoces();
+
+voiceSelect.addEventListener("change", () => {
+  vozSeleccionada = voces[Number(voiceSelect.value)];
+});
+
+function mezclar(array) {
+  let actual = array.length, temporal, aleatorio;
+  while (actual !== 0) {
+    aleatorio = Math.floor(Math.random() * actual);
+    actual--;
+    temporal = array[actual];
+    array[actual] = array[aleatorio];
+    array[aleatorio] = temporal;
+  }
+  return array;
+}
+
+function actualizarHistorial() {
+  listaHistorial.innerHTML = "";
+  historial.slice().reverse().forEach(carta => {
+    const li = document.createElement("li");
+    li.textContent = carta.nombre;
+    listaHistorial.appendChild(li);
+  });
+}
+
+function hablar(texto) {
+  if (!vozSeleccionada) {
+    cargarVoces();
+  }
+  const utterance = new SpeechSynthesisUtterance(texto);
+  utterance.lang = vozSeleccionada ? vozSeleccionada.lang : "es-MX";
+  if (vozSeleccionada) utterance.voice = vozSeleccionada;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utterance);
+}
+
+function mostrarCarta() {
+  if (baraja.length === 0) {
+    clearInterval(intervalo);
+    mostrando = false;
+    imgCarta.src = "";
+    btnIniciar.disabled = false;
+    btnPausar.disabled = true;
+    return;
+  }
+  const carta = baraja.pop();
+  historial.push(carta);
+  imgCarta.src = carta.archivo;
+  hablar(carta.nombre);
+  actualizarHistorial();
+}
+
+const sonidoBarajeo = new Audio("barajeo_cartas.mp3");
+
+function iniciar() {
+  if (mostrando) return;
+  if (baraja.length === 0) {
+    baraja = mezclar(cartas.slice());
+    historial = [];
+    actualizarHistorial();
+  }
+  mostrarCarta();
+  intervalo = setInterval(mostrarCarta, tiempoEntreCartas);
+  mostrando = true;
+  btnIniciar.disabled = true;
+  btnPausar.disabled = false;
+  btnReiniciar.disabled = false;
+}
+
+function pausar() {
+  if (!mostrando) return;
+  clearInterval(intervalo);
+  mostrando = false;
+  btnIniciar.disabled = false;
+  btnPausar.disabled = true;
+}
+
+function reiniciar() {
+  clearInterval(intervalo);
+  baraja = mezclar(cartas.slice());
+  historial = [];
+  imgCarta.src = "";
+  actualizarHistorial();
+  mostrando = false;
+  btnIniciar.disabled = false;
+  btnPausar.disabled = true;
+  btnReiniciar.disabled = true;
+  sonidoBarajeo.play();
+}
+
+timerSelect.addEventListener("change", () => {
+  tiempoEntreCartas = Number(timerSelect.value);
+  if (mostrando) {
+    clearInterval(intervalo);
+    intervalo = setInterval(mostrarCarta, tiempoEntreCartas);
+  }
+});
+
+btnIniciar.addEventListener("click", iniciar);
+btnPausar.addEventListener("click", pausar);
+btnReiniciar.addEventListener("click", reiniciar);
+
+</script>
+
+</body>
+</html>
